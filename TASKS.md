@@ -137,7 +137,7 @@ poids issus du benchmarking. Modèle : `substrate/dex/pallet/{benchmarking,weigh
 
 | Tâche | Statut | Test vert |
 |-------|--------|-----------|
-| T0.1  | ⬜ todo | — |
+| T0.1  | ✅ fait | `cargo test -p serai-economic-security-pallet` (5 verts) |
 | T0.2  | ⬜ todo | — |
 | T0.3  | ⬜ todo | — |
 | T1.1  | ⬜ todo | — |

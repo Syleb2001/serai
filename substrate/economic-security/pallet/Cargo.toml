@@ -29,6 +29,11 @@ coins-pallet = { package = "serai-coins-pallet", path = "../../coins/pallet", de
 
 serai-primitives = { path = "../../primitives", default-features = false }
 
+[dev-dependencies]
+sp-core = { git = "https://github.com/serai-dex/patch-polkadot-sdk", rev = "da19e1f8ca7a9e2cbf39fbfa493918eeeb45e10b", default-features = false, features = ["std"] }
+sp-io = { git = "https://github.com/serai-dex/patch-polkadot-sdk", rev = "da19e1f8ca7a9e2cbf39fbfa493918eeeb45e10b", default-features = false, features = ["std"] }
+sp-runtime = { git = "https://github.com/serai-dex/patch-polkadot-sdk", rev = "da19e1f8ca7a9e2cbf39fbfa493918eeeb45e10b", default-features = false, features = ["std"] }
+
 [features]
 std = [
   "scale/std",
