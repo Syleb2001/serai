@@ -25,6 +25,16 @@ cargo check -p serai-processor --features "binaries bitcoin rocksdb"
 
 > Idéalement automatisé via un SessionStart hook (`.claude/`).
 
+### Contraintes de l'environnement web (constatées en session)
+- ✅ crates.io, `apt`, et les deps git (`serai-dex/patch-polkadot-sdk`) sont accessibles.
+- 🚫 **L'API GitHub / les binaires de release sont bloqués (403)** → `foundryup`
+  échoue, donc **`anvil`/`forge` ne sont pas installables**. Les tests
+  `networks/ethereum` (qui lancent `anvil`) et les tests d'intégration Docker
+  **ne peuvent pas tourner ici**. Le périmètre unit-testable se limite aux crates
+  Rust pures sans nœud externe (crypto, primitives, pallets légers coins/dex/
+  economic-security, helpers purs). Les phases 2 (coordinator e2e) et 3 (Ethereum)
+  devront être validées dans un environnement avec Docker/foundry.
+
 ---
 
 ## Phase 0 — Harnais de tests unitaires pour les pallets critiques
@@ -98,6 +108,18 @@ valider le slashing / la sécurité économique sans ce harnais. Modèle existan
 - **Dépend de :** T0.3.
 
 ---
+
+### TS.2 — Implémenter `Shorthand::{Swap, SwapAndAddLiquidity}` → `RefundableInInstruction` (⚠️ décision protocole requise)
+- **Fichier :** `substrate/in-instructions/primitives/src/shorthand.rs:51-52`
+  (deux `todo!()` en code de prod → **panic à l'exécution** si un tel shorthand
+  est soumis).
+- **Bloqueur :** ces variantes ne sont construites/décodées **nulle part** dans
+  le code, et `DexCall` porte `// TODO: Update this per documentation/Shorthand`.
+  Le mapping (coin = entrée ou sortie ? perte de `OutInstruction.data` ? cible
+  Serai vs External ?) n'est pas spécifié → **nécessite un arbitrage de design**
+  avant implémentation, sous peine d'encoder une sémantique de swap erronée.
+- **Test (une fois la sémantique fixée) :** `shorthand::tests::swap_round_trips`
+  vérifiant la conversion attendue + (dé)sérialisation SCALE.
 
 ## Phase 2 — Robustesse du consensus (coordinator)
 
