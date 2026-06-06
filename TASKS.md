@@ -46,15 +46,30 @@ valider le slashing / la sécurité économique sans ce harnais. Modèle existan
     `EconomicSecurityReached` est émis exactement une fois.
 - **Commande :** `cargo test -p serai-economic-security-pallet`
 
-### T0.2 — Harnais `validator-sets` (le plus lourd : coins, session, babe, grandpa)
-- **Fichiers :** `substrate/validator-sets/pallet/src/{mock,tests}.rs`.
-- **Test de validation :** `validator_sets::tests::genesis_sets_are_registered`
-  - Genesis avec N validateurs → `participants(network)` contient les N clés,
-    `total_allocated_stake` cohérent.
-- **Commande :** `cargo test -p serai-validator-sets-pallet`
+### T0.2 — Harnais `validator-sets` (BLOQUÉ — voir note)
+- **Constat (session) :** la `Config` de `validator-sets` requiert
+  `pallet_session + pallet_babe + pallet_grandpa`, et ces pallets sont
+  **mutuellement interdépendants** avec `validator-sets` (babe utilise
+  `ValidatorSets` pour les équivocations/`DisabledValidators`, validator-sets
+  utilise `Babe` pour `ShouldEndSession`/`authorities`). Construire un mock
+  standalone revient à reconstruire tout le runtime → coût/fragilité
+  disproportionnés. C'est pourquoi l'amont ne teste ce pallet qu'en
+  **intégration** (`substrate/client/tests/validator_sets.rs`, via Docker).
+- **Stratégie révisée :** tester la logique de `validator-sets` (et des pallets
+  qui en dépendent : `signals`, `emissions`, `genesis-liquidity`) via
+  (a) extraction de **fonctions pures** unit-testables quand on ajoute du code
+  (slashing, gate de sécurité éco, seuil de halt), et (b) les **tests
+  d'intégration** existants. Les tâches T1.1–T1.3 doivent donc livrer leur
+  logique sous forme de helpers purs testables.
 
-### T0.3 — Harnais `signals` et `emissions`
-- Idem, en réutilisant les mocks de T0.2 (signals dépend de validator-sets + in-instructions).
+### T0.3 — Harnais `signals` / `emissions` (dépend de T0.2, même blocage)
+
+### TS.1 — Arithmétique non-panic des primitives ✅
+- **Fichiers :** `substrate/primitives/src/amount.rs`, `balance.rs`.
+- **Fait :** ajout de `checked_add/sub/mul` (+ `saturating_add/sub` sur `Amount`)
+  sur `Amount`, `Balance`, `ExternalBalance`, répondant aux TODO « ces impl ne
+  doivent pas paniquer » sans casser l'API opérateur (additif).
+- **Test :** `cargo test -p serai-primitives` (8 verts).
 
 ---
 
@@ -138,8 +153,9 @@ poids issus du benchmarking. Modèle : `substrate/dex/pallet/{benchmarking,weigh
 | Tâche | Statut | Test vert |
 |-------|--------|-----------|
 | T0.1  | ✅ fait | `cargo test -p serai-economic-security-pallet` (5 verts) |
-| T0.2  | ⬜ todo | — |
-| T0.3  | ⬜ todo | — |
+| T0.2  | 🚫 bloqué | mock impraticable (babe/grandpa/session interdépendants) → tests d'intégration |
+| T0.3  | 🚫 bloqué | dépend de T0.2 |
+| TS.1  | ✅ fait | `cargo test -p serai-primitives` (8 verts) |
 | T1.1  | ⬜ todo | — |
 | T1.2  | ⬜ todo | — |
 | T1.3  | ⬜ todo | — |
