@@ -24,6 +24,9 @@ use serai_primitives::{BlockHash, Balance, ExternalNetworkId, NetworkId, SeraiAd
 mod shorthand;
 pub use shorthand::*;
 
+#[cfg(test)]
+mod tests;
+
 pub const MAX_BATCH_SIZE: usize = 25_000; // ~25kb
 
 // This is the account which will be the origin for any dispatched `InInstruction`s.

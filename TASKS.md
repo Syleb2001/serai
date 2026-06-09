@@ -158,6 +158,26 @@ Tests existants dans `networks/ethereum/src/tests/` (nécessitent `anvil`/foundr
 
 ---
 
+## Couverture de tests (crates pures, sans infra externe)
+
+Renforcement de la couverture unitaire sur le périmètre testable dans cet
+environnement (pas de Docker/anvil).
+
+### TS.3 — Pallet `coins` ✅
+- Ajout de l'Instance1 (LiquidityTokens) au mock + tests des chemins non couverts :
+  `burn` (succès/échec/event), event `Transfer` + nettoyage du storage à zéro,
+  accumulation au mint, burn des fees en `on_initialize`, refus de
+  `burn_with_instruction` sur les LiquidityTokens.
+- **Test :** `cargo test -p serai-coins-pallet` (10 verts).
+
+### TS.4 — `in-instructions/primitives` ✅
+- Tests de round-trip d'encodage **SCALE** (consensus-critique) pour
+  `InInstruction`, `RefundableInInstruction`, `Shorthand`, `Batch`, +
+  `batch_message` (préfixe) et helpers `OutAddress`.
+- **Test :** `cargo test -p serai-in-instructions-primitives` (6 verts).
+
+---
+
 ## Phase 4 — Calibration des poids (weights) — prêt mainnet
 
 Tous les `#[pallet::weight(0)]` / `Weight::zero()` doivent être remplacés par des
@@ -178,6 +198,8 @@ poids issus du benchmarking. Modèle : `substrate/dex/pallet/{benchmarking,weigh
 | T0.2  | 🚫 bloqué | mock impraticable (babe/grandpa/session interdépendants) → tests d'intégration |
 | T0.3  | 🚫 bloqué | dépend de T0.2 |
 | TS.1  | ✅ fait | `cargo test -p serai-primitives` (8 verts) |
+| TS.3  | ✅ fait | `cargo test -p serai-coins-pallet` (10 verts) |
+| TS.4  | ✅ fait | `cargo test -p serai-in-instructions-primitives` (6 verts) |
 | T1.1  | ⬜ todo | — |
 | T1.2  | ⬜ todo | — |
 | T1.3  | ⬜ todo | — |
