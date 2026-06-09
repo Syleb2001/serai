@@ -8940,6 +8940,9 @@ dependencies = [
  "serai-coins-pallet",
  "serai-dex-pallet",
  "serai-primitives",
+ "sp-core",
+ "sp-io",
+ "sp-runtime",
 ]
 
 [[package]]
