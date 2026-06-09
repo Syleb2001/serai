@@ -1,11 +1,26 @@
 use crate::{mock::*, primitives::*};
 
 use frame_system::RawOrigin;
-use sp_core::Pair;
+use frame_support::{traits::Hooks, assert_noop};
+use sp_core::{Pair, sr25519::Public};
 
 use serai_primitives::*;
 
 pub type CoinsEvent = crate::Event<Test, ()>;
+
+/// Count the `Coins` events emitted so far which match `predicate`.
+fn count_coins_events(predicate: impl Fn(&CoinsEvent) -> bool) -> usize {
+  System::events()
+    .iter()
+    .filter(|event| {
+      if let RuntimeEvent::Coins(e) = &event.event {
+        predicate(e)
+      } else {
+        false
+      }
+    })
+    .count()
+}
 
 #[test]
 fn mint() {
@@ -125,5 +140,109 @@ fn transfer() {
 
     // supply shouldn't change
     assert_eq!(Coins::supply(coin), balance.amount.0);
+  })
+}
+
+#[test]
+fn mint_accumulates() {
+  new_test_ext().execute_with(|| {
+    let coin = Coin::Serai;
+    let to = insecure_pair_from_name("random1").public();
+
+    Coins::mint(to, Balance { coin, amount: Amount(10) }).unwrap();
+    Coins::mint(to, Balance { coin, amount: Amount(5) }).unwrap();
+
+    assert_eq!(Coins::balance(to, coin), Amount(15));
+    assert_eq!(Coins::supply(coin), 15);
+  })
+}
+
+#[test]
+fn burn_reduces_balance_and_supply() {
+  new_test_ext().execute_with(|| {
+    let coin = Coin::External(ExternalCoin::Bitcoin);
+    let from = insecure_pair_from_name("random1").public();
+    Coins::mint(from, Balance { coin, amount: Amount(100) }).unwrap();
+
+    // Burning more than held fails without mutating state.
+    assert_noop!(
+      Coins::burn(RawOrigin::Signed(from).into(), Balance { coin, amount: Amount(101) }),
+      crate::Error::<Test, ()>::NotEnoughCoins
+    );
+    assert_eq!(Coins::balance(from, coin), Amount(100));
+    assert_eq!(Coins::supply(coin), 100);
+
+    // Burning part reduces both balance and supply, and emits a Burn event.
+    let burned = Balance { coin, amount: Amount(40) };
+    Coins::burn(RawOrigin::Signed(from).into(), burned).unwrap();
+    assert_eq!(Coins::balance(from, coin), Amount(60));
+    assert_eq!(Coins::supply(coin), 60);
+
+    assert_eq!(
+      count_coins_events(|e| matches!(e, CoinsEvent::Burn { from: f, balance } if *f == from && *balance == burned)),
+      1
+    );
+  })
+}
+
+#[test]
+fn transfer_emits_event_and_cleans_storage() {
+  new_test_ext().execute_with(|| {
+    let coin = Coin::External(ExternalCoin::Bitcoin);
+    let from = insecure_pair_from_name("random1").public();
+    let to = insecure_pair_from_name("random2").public();
+    Coins::mint(from, Balance { coin, amount: Amount(100) }).unwrap();
+
+    // A partial transfer keeps the sender's storage entry.
+    Coins::transfer(RawOrigin::Signed(from).into(), to, Balance { coin, amount: Amount(40) })
+      .unwrap();
+    assert!(crate::Balances::<Test>::contains_key(from, coin));
+    assert_eq!(Coins::balance(from, coin), Amount(60));
+
+    // Transferring the remainder removes the now-zero storage entry.
+    Coins::transfer(RawOrigin::Signed(from).into(), to, Balance { coin, amount: Amount(60) })
+      .unwrap();
+    assert!(!crate::Balances::<Test>::contains_key(from, coin));
+    assert_eq!(Coins::balance(from, coin), Amount(0));
+    assert_eq!(Coins::balance(to, coin), Amount(100));
+
+    // Both transfers emitted a Transfer event; supply is unchanged.
+    assert_eq!(count_coins_events(|e| matches!(e, CoinsEvent::Transfer { .. })), 2);
+    assert_eq!(Coins::supply(coin), 100);
+  })
+}
+
+#[test]
+fn fees_are_burned_on_initialize() {
+  new_test_ext().execute_with(|| {
+    let fee_account: Public = FEE_ACCOUNT.into();
+    let coin = Coin::Serai;
+
+    // Simulate fees collected into the fee account during a block.
+    Coins::mint(fee_account, Balance { coin, amount: Amount(1000) }).unwrap();
+    assert_eq!(Coins::balance(fee_account, coin), Amount(1000));
+    assert_eq!(Coins::supply(coin), 1000);
+
+    // The next block's on_initialize burns the collected fees.
+    Coins::on_initialize(1);
+    assert_eq!(Coins::balance(fee_account, coin), Amount(0));
+    assert_eq!(Coins::supply(coin), 0);
+  })
+}
+
+#[test]
+fn burn_with_instruction_not_allowed_for_liquidity_tokens() {
+  new_test_ext().execute_with(|| {
+    let who = insecure_pair_from_name("random1").public();
+    let instruction = OutInstructionWithBalance {
+      instruction: OutInstruction { address: ExternalAddress::new(vec![]).unwrap(), data: None },
+      balance: ExternalBalance { coin: ExternalCoin::Bitcoin, amount: Amount(1) },
+    };
+
+    // Liquidity tokens (Instance1) must never be burnable with an out-instruction.
+    assert_noop!(
+      LiquidityTokens::burn_with_instruction(RawOrigin::Signed(who).into(), instruction),
+      crate::Error::<Test, crate::Instance1>::BurnWithInstructionNotAllowed
+    );
   })
 }

@@ -16,6 +16,7 @@ construct_runtime!(
   {
     System: frame_system,
     Coins: coins,
+    LiquidityTokens: coins::<Instance1>::{Pallet, Call, Storage, Event<T>},
   }
 );
 
@@ -27,6 +28,10 @@ impl frame_system::Config for Test {
 }
 
 impl Config for Test {
+  type AllowMint = ();
+}
+
+impl Config<crate::Instance1> for Test {
   type AllowMint = ();
 }
 
