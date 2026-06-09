@@ -176,6 +176,13 @@ environnement (pas de Docker/anvil).
   `batch_message` (préfixe) et helpers `OutAddress`.
 - **Test :** `cargo test -p serai-in-instructions-primitives` (6 verts).
 
+### TS.5 — `validator-sets/primitives` ✅
+- Tests des fonctions pures : `amortize_excess_key_shares` (réduction reverse
+  round-robin jusqu'au max exact — consensus-critique),
+  `post_amortization_key_shares_for_top_validator`, `musig_context`, et les
+  messages à séparation de domaine `set_keys_message`/`report_slashes_message`.
+- **Test :** `cargo test -p serai-validator-sets-primitives` (5 verts).
+
 ---
 
 ## Phase 4 — Calibration des poids (weights) — prêt mainnet
@@ -200,6 +207,7 @@ poids issus du benchmarking. Modèle : `substrate/dex/pallet/{benchmarking,weigh
 | TS.1  | ✅ fait | `cargo test -p serai-primitives` (8 verts) |
 | TS.3  | ✅ fait | `cargo test -p serai-coins-pallet` (10 verts) |
 | TS.4  | ✅ fait | `cargo test -p serai-in-instructions-primitives` (6 verts) |
+| TS.5  | ✅ fait | `cargo test -p serai-validator-sets-primitives` (5 verts) |
 | T1.1  | ⬜ todo | — |
 | T1.2  | ⬜ todo | — |
 | T1.3  | ⬜ todo | — |

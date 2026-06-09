@@ -19,6 +19,9 @@ use sp_std::vec::Vec;
 
 use serai_primitives::{ExternalNetworkId, NetworkId};
 
+#[cfg(test)]
+mod tests;
+
 /// The maximum amount of key shares per set.
 pub const MAX_KEY_SHARES_PER_SET: u32 = 150;
 // Support keys up to 96 bytes (BLS12-381 G2).
